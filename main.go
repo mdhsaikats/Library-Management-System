@@ -101,7 +101,9 @@ func Registration(db *sql.DB, fullname, position string, age int, email, usernam
 		fmt.Println("All fields are required. Please try again.")
 		return
 	}
-	query := "INSERT INTO admin (fullname, positon, age,email,username,password_hash) VALUES (?, ?, ?)"
+	// ...existing code...
+	query := "INSERT INTO admin (full_name, position, age, email, username, password_hash) VALUES (?, ?, ?, ?, ?, ?)"
+	// ...existing code...
 	_, err := db.Exec(query, fullname, position, age, email, username, password_hash)
 	if err != nil {
 		fmt.Println("Error inserting into database:", err)
@@ -110,15 +112,16 @@ func Registration(db *sql.DB, fullname, position string, age int, email, usernam
 	system(db)
 }
 
-func SignIn(db *sql.DB) {
-	var username, password string
-	fmt.Print("Enter your username: ")
-	fmt.Scanln(&username)
-	fmt.Print("Enter your password: ")
-	fmt.Scanln(&password)
-	query := "SELECT * FROM Users WHERE name = ? AND email = ?"
-	var name, email, phone string
-	err := db.QueryRow(query, username, password).Scan(&name, &email, &phone)
+func SignIn(db *sql.DB, username, password_hash string) {
+	fmt.Println("Sign In")
+	if username == "" || password_hash == "" {
+		fmt.Println("Username and password are required. Please try again.")
+		return
+	}
+
+	query := "SELECT username FROM admin WHERE username = ? AND password_hash = ?"
+	var dbUsername string
+	err := db.QueryRow(query, username, password_hash).Scan(&dbUsername)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			fmt.Println("User not found. Please register first.")
@@ -127,11 +130,13 @@ func SignIn(db *sql.DB) {
 		}
 		return
 	}
-
+	fmt.Println("Sign in successful. Welcome,", dbUsername)
+	system(db)
 }
+
 func main() {
 	// Connect to the database
-	db, err := sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/library_management")
+	db, err := sql.Open("mysql", "root:29112003@tcp(127.0.0.1:3306)/library_management")
 	if err != nil {
 		fmt.Println("Error connecting to the database:", err)
 		return
@@ -146,7 +151,30 @@ func main() {
 		fmt.Scanln(&choice)
 		switch choice {
 		case 1:
-			SignIn(db)
+			//verify user just by user name from my database
+			var username string
+			fmt.Print("Enter your username: ")
+			fmt.Scanln(&username)
+			var password_hash string
+			fmt.Print("Enter your password: ")
+			fmt.Scanln(&password_hash)
+			// Check if the user exists in the database
+			query := "SELECT username,password_hash FROM admin WHERE username = ? AND password_hash = ?"
+			row := db.QueryRow(query, username, password_hash)
+			// Scan the result into a variable
+			err := row.Scan(&username, &password_hash)
+			//conditon to check the username is same or not
+			if err != nil {
+				if err == sql.ErrNoRows {
+					fmt.Println("User not found. Please register first.")
+				} else {
+					fmt.Println("Error querying the database:", err)
+				}
+				return
+			}
+			fmt.Println("User found, proceeding to sign in...")
+			// Call the SignIn function
+			SignIn(db, username, password_hash)
 		case 2:
 			var fullname, position, username, password_hash string
 			var age int
