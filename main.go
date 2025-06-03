@@ -13,7 +13,20 @@ func addBook(db *sql.DB, title, author, isbn, genre string, published_year int) 
 	fmt.Println("Book added successfully!")
 }
 func addUser(db *sql.DB, name, email, phone string) {
-	query := "INSERT INTO Users (name, email, phone) VALUES (?, ?, ?)"
+	fmt.Println("Adding new user...")
+	fmt.Println("Please enter the following details:")
+	fmt.Printf("Name: ")
+	fmt.Scanln(&name)
+	fmt.Printf("Email: ")
+	fmt.Scanln(&email)
+	fmt.Printf("Phone: ")
+	fmt.Scanln(&phone)
+	if name == "" || email == "" || phone == "" {
+		fmt.Println("All fields are required. Please try again.")
+		return
+	}
+	// Insert the new user into the database
+	query := "INSERT INTO users (name, email, phone) VALUES (?, ?, ?)"
 	_, err := db.Exec(query, name, email, phone)
 	if err != nil {
 		fmt.Println("Error adding user:", err)
@@ -95,6 +108,43 @@ func system(db *sql.DB) {
 	}
 }
 
+func user(db *sql.DB) {
+	fmt.Println("Welcome to the user dashboard")
+	fmt.Println("Enter the user phone number to proceed or type 'logout' to exit")
+	var givenPhone string
+	fmt.Print("Enter your phone number: ")
+	fmt.Scanln(&givenPhone)
+
+	if givenPhone == "logout" {
+		fmt.Println("Logging out...")
+		return
+	}
+
+	var phone string
+	query := "SELECT phone FROM users WHERE phone = ?"
+	err := db.QueryRow(query, givenPhone).Scan(&phone)
+
+	if err == nil && phone == givenPhone {
+		fmt.Println("User found, proceeding to user dashboard...")
+		system(db)
+		return
+	} else {
+		fmt.Println("User not found. Please register first.")
+		fmt.Println("Would you like to register a new user? (yes/no)")
+		var response string
+		fmt.Scanln(&response)
+		if response == "yes" || response == "Yes" {
+			addUser(db, "", "", "")
+			user(db)
+		} else if response == "no" || response == "No" {
+			fmt.Println("Exiting the user dashboard.")
+		} else {
+			fmt.Println("Invalid response. Please try again.")
+			user(db)
+		}
+	}
+}
+
 func Registration(db *sql.DB, fullname, position string, age int, email, username, password_hash string) {
 	fmt.Println("Registration")
 	if fullname == "" || position == "" || age <= 0 || username == "" || password_hash == "" {
@@ -131,7 +181,7 @@ func SignIn(db *sql.DB, username, password_hash string) {
 		return
 	}
 	fmt.Println("Sign in successful. Welcome,", dbUsername)
-	system(db)
+	user(db)
 }
 
 func main() {
